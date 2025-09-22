@@ -1,32 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/database/prisma";
 import { getDataFromToken } from "@/helpers/getDataFromToken";
-import { boardSchema } from "@/app/lib/validators";
-import { handleError, unauthorized } from "@/app/lib/errors";
+import { cardSchema } from "@/app/lib/validators";
+import { apiSuccess, handleError, unauthorized } from "@/app/lib/errors";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    const { title } = boardSchema.parse(body);
+    const { title, description, position, listId } = cardSchema.parse(body);
 
     const userId = getDataFromToken(req);
-    if (!userId) return unauthorized("Unauthorized");
+    if (!userId) return unauthorized("No user found");
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return unauthorized("No user found");
 
-    const createBoard = await prisma.board.create({
+    // Now TypeScript knows listId exists
+    const createCard = await prisma.card.create({
       data: {
         title,
-        ownerId: user.id,
+        description,
+        position,
+        listId,
       },
     });
 
-    return NextResponse.json(
-      { message: "Board created", createBoard },
-      { status: 201 }
-    );
+    return apiSuccess(createCard, "Card created", 201);
   } catch (error) {
     return handleError(error);
   }
